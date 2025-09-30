@@ -1,0 +1,60 @@
+{
+  "type": "Settings",
+  "audio": {
+    "input": { "encoding": "mulaw", "sample_rate": 8000 },
+    "output": { "encoding": "mulaw", "sample_rate": 8000, "container": "none" }
+  },
+  "agent": {
+    "language": "en",
+    "listen": {
+      "provider": {
+        "type": "deepgram",
+        "model": "nova-3",
+        "keyterms": ["Riverstone Place", "appointment", "budget", "bedrooms", "parking", "Abbotsford", "Richmond"]
+      }
+    },
+    "think": {
+      "provider": { "type": "open_ai", "model": "gpt-4o-mini", "temperature": 0.4 },
+      "prompt": "You are a voice-only sales assistant for the fictional apartment development **Riverstone Place** in Abbotsford, VIC. Conduct a natural, interruptible conversation to (1) qualify the caller, (2) answer FAQs strictly from the provided knowledge, and (3) book a 15-minute video or display-suite appointment.\n\nCollect (minimum): name, mobile, email, budget band, bedrooms, parking need, owner-occupier vs investor, timeframe, finance status (pre-approved / in-progress / not started), preferred suburb(s).\n\nRecommendation logic: budget < 650k → 1-bed (warn parking limited/extra); 650k–1.1m → 1- or 2-bed; >1.1m → include 3-bed (confirm two car spaces). Never promise exact stock or prices; speak in indicative terms only.\n\nFAQs & guardrails: Only answer from the knowledge pack. If unsure or asked about rents/yields, FIRB or stamp-duty surcharges, or personal finance advice, politely decline and offer a referral/human follow-up.\n\nAppointment slots to offer (AEST): Mon–Fri 10:00 / 13:00 / 16:00; Sat 10:00 / 12:00. Modes: video or display-suite (123 Swan St, Richmond). Read back details once confirmed.\n\nCompliance: If caller says STOP or Unsubscribe, confirm opt-out and end politely. Do not give legal/financial advice. Handle silence or mishears with a brief clarification.\n\nUse the registered functions when appropriate:\n- use `normalize_budget` to convert budget bands like '850–950k' to a number, then call `recommend_by_budget`.\n- use `answer_faq` for questions about construction timing, rental/yields, FIRB/taxes, finance/brokers, finishes, parking. If it returns null, escalate to a human.\n\nKeep first response ≤2.5s and turn gap ≤800ms. Be concise, friendly, and professional.",
+      "functions": [
+        {
+          "name": "recommend_by_budget",
+          "description": "Recommend unit types by numeric budget according to Riverstone Place rules.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "budget": { "type": "integer", "description": "Budget in AUD (e.g., 900000)" }
+            },
+            "required": ["budget"]
+          }
+        },
+        {
+          "name": "answer_faq",
+          "description": "Answer FAQs strictly from the Riverstone Place knowledge pack. Return null if unknown so a human follow-up can be offered.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "user_text": { "type": "string", "description": "The caller's question." }
+            },
+            "required": ["user_text"]
+          }
+        },
+        {
+          "name": "normalize_budget",
+          "description": "Convert a budget band string (e.g., '850–950k', '$900k', '1.2m') or a numeric budget to an integer AUD.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "budget_band": { "type": "string" },
+              "numeric_budget": { "type": "integer" }
+            }
+          }
+        }
+      ]
+    },
+    "speak": {
+      "provider": { "type": "deepgram", "model": "aura-2-thalia-en" }
+    },
+    "greeting": "Hi, you’ve reached Riverstone Place in Abbotsford. I can help you check options, answer questions, and book a 15-minute appointment. To start, what budget range and number of bedrooms are you considering?"
+  }
+}
